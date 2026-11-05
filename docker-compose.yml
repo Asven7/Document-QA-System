@@ -1,0 +1,101 @@
+# ---------------------------------------------------------------------------
+# Document QA System - Docker Compose
+#
+# Start the whole stack:
+#     docker compose up --build
+#
+# Stop (data survives in named volumes):
+#     docker compose down
+#
+# Stop and wipe all stored data (INCLUDING the downloaded embedding model):
+#     docker compose down -v
+#
+# Startup order:
+#     db (healthcheck) -> embedding-init (downloads/verifies the model into
+#     the persistent model_cache volume, then exits 0) -> web (Django).
+#     The web container only starts after the model is ready, so document
+#     uploads never trigger a model download.
+# ---------------------------------------------------------------------------
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-documentqa}
+      POSTGRES_USER: ${POSTGRES_USER:-documentqa}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-documentqa}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-documentqa} -d ${POSTGRES_DB:-documentqa}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # One-shot initializer: downloads the configured embedding model (once) into
+  # the persistent model_cache volume, verifies it with a real embedding
+  # forward pass, and exits 0. Reuses the same image, settings and loader as
+  # the web application, so the exact same model identifier and cache are used.
+  embedding-init:
+    build: .
+    # Override the web ENTRYPOINT: this container must ONLY prepare the
+    # model (no database wait, no gunicorn) and exit.
+    entrypoint: ["python", "manage.py"]
+    command: ["preload_embedding_model"]
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # No database is needed for model preparation, but keeping the same
+      # settings source avoids any drift with the web service.
+      POSTGRES_HOST: db
+    volumes:
+      # Same persistent volume the web service reads the model from.
+      - model_cache:/app/model_cache
+    # Deliberately NO HF_HUB_OFFLINE here: this service may download/repair
+    # the cache. Everything downstream runs with the cache complete.
+    restart: "no"
+
+  web:
+    build: .
+    env_file:
+      # Optional: a fresh clone without a .env still starts with the defaults
+      # (see .env.example); create a .env to configure the LLM key etc.
+      - path: .env
+        required: false
+    environment:
+      # Inside the compose network the database host is the service name.
+      POSTGRES_HOST: db
+      # Local-cache mode: after embedding-init has verified the cache, the
+      # web app must never reach out to the model repository. A missing or
+      # invalid cache therefore fails fast and loudly instead of silently
+      # downloading ~1 GB during the first upload. Set EMBEDDING_OFFLINE=0
+      # in .env to allow ad-hoc downloads from the web container (not
+      # recommended).
+      HF_HUB_OFFLINE: ${EMBEDDING_OFFLINE:-1}
+    ports:
+      - "${WEB_PORT:-8000}:8000"
+    volumes:
+      # Persistent Chroma vector index.
+      - chroma_data:/app/chroma_data
+      # Persistent embedding-model cache, written by embedding-init and
+      # read-only in practice by the web app.
+      - model_cache:/app/model_cache
+    depends_on:
+      db:
+        condition: service_healthy
+      embedding-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/api/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  chroma_data:
+  model_cache:

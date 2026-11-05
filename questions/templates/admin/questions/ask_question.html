@@ -1,0 +1,53 @@
+{% extends "admin/base_site.html" %}
+{% block title %}Ask a question | {{ site_title }}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  .ask-question-form { max-width: 760px; }
+  .ask-question-form label { font-weight: 600; display: block; margin-bottom: 4px; }
+  .ask-question-form .form-row { margin-bottom: 16px; }
+  .ask-question-form .help { color: #666; font-size: 12px; margin-top: 4px; }
+  .ask-question-form textarea { direction: auto; }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Home</a>
+  &rsaquo; <a href="{% url 'admin:questions_question_changelist' %}">Questions</a>
+  &rsaquo; Ask a question
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>Ask a question</h1>
+<p class="help">
+  Submitting runs the full RAG pipeline: hybrid retrieval over the processed
+  documents, then answer generation with the configured OpenRouter model.
+  Currently <strong>{{ processed_documents }}</strong> processed document(s) are indexed.
+  Leave "Restrict to documents" empty to search all of them.
+</p>
+
+<form method="post" class="ask-question-form">
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+    <ul class="errorlist">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>
+  {% endif %}
+  <div class="form-row">
+    {{ form.question_text.label_tag }}
+    {{ form.question_text }}
+    {% if form.question_text.errors %}<ul class="errorlist">{% for e in form.question_text.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+    <p class="help">{{ form.question_text.help_text }}</p>
+  </div>
+  <div class="form-row">
+    {{ form.document_scope.label_tag }}
+    {{ form.document_scope }}
+    {% if form.document_scope.errors %}<ul class="errorlist">{% for e in form.document_scope.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+    <p class="help">{{ form.document_scope.help_text }}</p>
+  </div>
+  <div class="submit-row">
+    <input type="submit" value="Submit question" class="default" />
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,39 @@
+# ---------------------------------------------------------------------------
+# Document QA System - pinned dependencies
+#
+# Python 3.12 is required (the Docker image uses python:3.12-slim).
+# Versions are pinned so that Docker builds are reproducible.
+# ---------------------------------------------------------------------------
+
+# Web framework
+Django==6.1.2
+djangorestframework==3.18.3
+drf-spectacular==0.30.0            # OpenAPI schema + Swagger UI
+whitenoise==6.12.0                 # static files in the container (no nginx needed)
+gunicorn==26.2.0                   # production WSGI server
+
+# Database driver (PostgreSQL)
+psycopg[binary]==3.3.7
+
+# .env loading for local (non-Docker) runs; Docker Compose injects the same file
+python-dotenv==1.2.2
+
+# LLM / RAG stack (LangChain + OpenRouter through the OpenAI-compatible API)
+langchain==1.4.8
+langchain-core==1.7.4
+langchain-openai==1.7.3            # ChatOpenAI pointed at OPENROUTER_BASE_URL
+langchain-text-splitters==1.1.3    # RecursiveCharacterTextSplitter
+langchain-chroma==1.1.0            # LangChain Chroma vector store wrapper
+openai==3.42.1                     # exception types shared with langchain-openai
+
+# Vector database (embedded, file-backed persistence)
+chromadb==1.5.9
+
+# Multilingual (Persian-capable) local embeddings through ONNX
+fastembed==0.9.1
+
+# Lexical retrieval channel (BM25)
+rank-bm25==0.2.2
+
+# DOCX extraction
+python-docx==1.2.0

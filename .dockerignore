@@ -1,0 +1,44 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Python artifacts
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+.venv
+venv
+env
+
+# Django runtime data (must not enter the image)
+db.sqlite3
+media/
+staticfiles/
+chroma_data/
+sample_data/generated/
+
+# Local environment files (secrets!)
+.env
+.env.*
+!.env.example
+
+# Documentation / deliverables that are not needed at runtime
+docs/
+screenshots/
+*.zip
+*.md
+!README.md
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.idea
+.vscode
+
+# Embedding-model cache
+model_cache/
+
+# Audit virtualenv (not part of the project)
+.venv-audit/

@@ -1,0 +1,15 @@
+{% extends "admin/change_list.html" %}
+
+{% comment %}
+Document list with auto-refresh: documents are processed asynchronously
+(pending → processing → completed/failed), so while any of them is still in
+a transient state this page reloads itself every 3 seconds. The flag is set
+by DocumentAdmin.changelist_view only when processing is actually running.
+{% endcomment %}
+
+{% block extrahead %}
+{{ block.super }}
+{% if documents_processing %}
+  <meta http-equiv="refresh" content="3">
+{% endif %}
+{% endblock %}
